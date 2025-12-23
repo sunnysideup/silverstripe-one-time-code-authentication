@@ -21,6 +21,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
     use Configurable;
 
     private static int $max_failed_attempts = 10;
+    private static bool $send_with_sms = false;
 
     private static $allowed_actions = [
         'LoginForm',
@@ -126,15 +127,18 @@ class OneTimeCodeLoginHandler extends LoginHandler
     {
         $member->generateOneTimeCode();
 
-        // If SMS sending is implemented, it would go here as an alternative to email.
-
-        $email = Email::create()
-            ->setHTMLTemplate('Sunnysideup\\OneTimeCode\\Email\\OneTimeCodeLoginEmail')
-            ->setData($member)
-            ->setSubject('Your login one-time code')
-            ->setTo($member->Email);
-        if ($member->isInDB()) {
-            $email->send();
+        if (self::config()->get('send_with_sms')) {
+            // SMS integration is sitee-specific and must be implemented by the user.
+            $this->extend('updateSendOneTimeCodeViaSMS', $member);
+        } else {
+            $email = Email::create()
+                ->setHTMLTemplate('Sunnysideup\\OneTimeCode\\Email\\OneTimeCodeLoginEmail')
+                ->setData($member)
+                ->setSubject('Your login one-time code')
+                ->setTo($member->Email);
+            if ($member->isInDB()) {
+                $email->send();
+            }
         }
     }
 }

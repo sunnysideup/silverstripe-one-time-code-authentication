@@ -132,6 +132,9 @@ class OneTimeCodeLoginForm extends LoginForm
         }
         else {
             $description = 'A one-time login code will be sent to this email address.';
+            if (OneTimeCodeLoginHandler::config()->get('send_with_sms')) {
+                $description = 'A one-time login code will be sent to the phone number associated with this account.';
+            }
             if (OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
                 $description .= '<br> Note: CMS users cannot log in using one-time codes.';
             }
