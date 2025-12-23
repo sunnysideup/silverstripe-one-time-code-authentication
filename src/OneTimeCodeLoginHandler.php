@@ -34,6 +34,14 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         $data['Email'] = $email;
 
+        //put together one time code from six front-end fields
+        $oneTimeCode = '';
+        for ($i = 1; $i <= 6; ++$i) {
+            $oneTimeCodePart = $data['OneTimeCode' . $i] ?? '';
+            $oneTimeCode .= $oneTimeCodePart;
+        }
+        $data['OneTimeCode'] = $oneTimeCode;
+
         /** @var OneTimeCodeAuthenticator $authenticator */
         $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
         $member = $authenticator->authenticate($data, $request, $result);
@@ -51,7 +59,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
         }
         else {
-            $form->sessionMessage('Matching member not found.', ValidationResult::TYPE_ERROR);
+            $form->sessionMessage('Invalid one-time code.', ValidationResult::TYPE_ERROR);
         }
 
         return $form->getRequestHandler()->redirectBackToForm();
@@ -68,7 +76,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
             $this->sendOneTimeCode($member);
 
         }
-        
+
         $request->getSession()->set('OneTimeCodeSent', true);
         $request->getSession()->set('OneTimeCodeEmail', $data['Email'] ?? '');
 

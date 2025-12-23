@@ -51,7 +51,9 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
             }
         }
 
-        $result->addError('Invalid email or code.');
+        if ($result) {
+            $result->addError('Invalid email or code.');
+        }
 
         return null;
     }
