@@ -1,1 +1,13 @@
-# see https://docs.silverstripe.org/en/developer_guides/configuration/configuration/
+SilverStripe\Security\Member:
+  extensions:
+    - Sunnysideup\OneTimeCode\MemberExtension
+
+SilverStripe\CMS\Controllers\ContentController:
+  extensions:
+    - Sunnysideup\OneTimeCode\ControllerExtension
+
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Security\Security:
+    properties:
+      Authenticators:
+        pincode: '%$Sunnysideup\OneTimeCode\PincodeAuthenticator'
