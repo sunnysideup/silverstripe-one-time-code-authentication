@@ -7,17 +7,20 @@ namespace Sunnysideup\OneTimeCode;
 use SilverStripe\Control\Email\Email;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\MFA\Authenticator\LoginHandler;
 use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\MemberAuthenticator\LogoutHandler;
+use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 
 class OneTimeCodeLoginHandler extends LoginHandler
 {
+    use Configurable;
 
-    private static int $maxFailedAttempts = 10;
+    private static int $max_failed_attempts = 10;
 
     private static $allowed_actions = [
         'LoginForm',
@@ -50,7 +53,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
             ->filter([$identifierField => $email])
             ->first();
 
-        if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= self::$maxFailedAttempts) {
+        if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= self::config()->get('max_failed_attempts')) {
             $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
             $request->getSession()->clear('OneTimeCodeSent');
             $request->getSession()->clear('OneTimeCodeEmail');
@@ -95,8 +98,12 @@ class OneTimeCodeLoginHandler extends LoginHandler
             ->first();
 
         if ($member) {
-            if ($member->OneTimeCodeFailedAttempts >= self::$maxFailedAttempts) {
+            if ($member->OneTimeCodeFailedAttempts >= self::config()->get('max_failed_attempts')) {
                 $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
+                return $form->getRequestHandler()->redirectBackToForm();
+            }
+            if (Permission::checkMember($member, 'CMS_ACCESS') && OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
+                $form->sessionMessage('CMS users cannot log in using one-time codes.', ValidationResult::TYPE_ERROR);
                 return $form->getRequestHandler()->redirectBackToForm();
             }
             $this->sendOneTimeCode($member);

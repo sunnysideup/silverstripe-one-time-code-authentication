@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace Sunnysideup\OneTimeCode;
 
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\Authenticator;
 use SilverStripe\Security\IdentityStore;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\MemberAuthenticator\MemberAuthenticator;
+use SilverStripe\Security\Permission;
 
 class OneTimeCodeAuthenticator extends MemberAuthenticator
 {
+    use Configurable;
+
+    private static bool $can_login_to_cms = false;
+
     public function supportedServices(): int
     {
         return Authenticator::LOGIN;
@@ -41,14 +47,17 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
             $identityStore = Injector::inst()->get(IdentityStore::class);
 
             if ($result->isValid()) {
-                $identityStore->logIn($member, false, $request);
-                $member->registerSuccessfulLogin();
-                return $member;
+                if (self::config()->get('can_login_to_cms') || !Permission::checkMember($member, 'CMS_ACCESS')) {
+                    $identityStore->logIn($member, false, $request);
+                    $member->registerSuccessfulLogin();
+                    return $member;
+                }
+                else {
+                    $result->addError('CMS User Login is not allowed with One Time Code authentication.');
+                }
             }
-            else {
-                $identityStore->logOut();
-                $member->registerFailedLogin();
-            }
+            $identityStore->logOut();
+            $member->registerFailedLogin();
         }
 
         if ($result) {
