@@ -16,6 +16,9 @@ use SilverStripe\Security\Security;
 
 class OneTimeCodeLoginHandler extends LoginHandler
 {
+
+    private static int $maxFailedAttempts = 10;
+
     private static $allowed_actions = [
         'LoginForm',
     ];
@@ -24,11 +27,10 @@ class OneTimeCodeLoginHandler extends LoginHandler
     {
         $email = $request->getSession()->get('OneTimeCodeEmail');
 
-        $request->getSession()->clear('OneTimeCodeSent');
-        $request->getSession()->clear('OneTimeCodeEmail');
-
         if (!$email) {
             $form->sessionMessage('Session expired.', ValidationResult::TYPE_ERROR);
+            $request->getSession()->clear('OneTimeCodeSent');
+            $request->getSession()->clear('OneTimeCodeEmail');
             return $form->getRequestHandler()->redirectBackToForm();
         }
 
@@ -42,6 +44,19 @@ class OneTimeCodeLoginHandler extends LoginHandler
         }
         $data['OneTimeCode'] = $oneTimeCode;
 
+        // just get member by email to increment failed attempts
+        $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
+        $memberByEmail = Member::get()
+            ->filter([$identifierField => $email])
+            ->first();
+
+        if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= self::$maxFailedAttempts) {
+            $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
+            $request->getSession()->clear('OneTimeCodeSent');
+            $request->getSession()->clear('OneTimeCodeEmail');
+            return $form->getRequestHandler()->redirectBackToForm();
+        }
+
         /** @var OneTimeCodeAuthenticator $authenticator */
         $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
         $member = $authenticator->authenticate($data, $request, $result);
@@ -54,12 +69,19 @@ class OneTimeCodeLoginHandler extends LoginHandler
                 // If a default login dest has been set, redirect to that.
                 $backURL = Security::config()->get('default_login_dest') ?: $backURL;
 
+                $request->getSession()->clear('OneTimeCodeSent');
+                $request->getSession()->clear('OneTimeCodeEmail');
                 return $this->redirect($backURL);
             }
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
         }
         else {
             $form->sessionMessage('Invalid one-time code.', ValidationResult::TYPE_ERROR);
+        }
+
+        if ($memberByEmail) {
+            $memberByEmail->OneTimeCodeFailedAttempts += 1;
+            $memberByEmail->write();
         }
 
         return $form->getRequestHandler()->redirectBackToForm();
@@ -73,8 +95,11 @@ class OneTimeCodeLoginHandler extends LoginHandler
             ->first();
 
         if ($member) {
+            if ($member->OneTimeCodeFailedAttempts >= self::$maxFailedAttempts) {
+                $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
+                return $form->getRequestHandler()->redirectBackToForm();
+            }
             $this->sendOneTimeCode($member);
-
         }
 
         $request->getSession()->set('OneTimeCodeSent', true);

@@ -12,7 +12,15 @@ class MemberExtension extends DataExtension
     private static array $db = [
         'OneTimeCode' => 'Varchar(6)',
         'OneTimeCodeExpiry' => 'Datetime',
+        'OneTimeCodeFailedAttempts' => 'Int',
     ];
+
+    public function afterMemberLoggedIn(): void
+    {
+        // reset failed attempts on successful login
+        $this->owner->OneTimeCodeFailedAttempts = 0;
+        $this->owner->write();
+    }
 
     public function generateOneTimeCode(int $length = 6, int $expiryMinutes = 15): void
     {
@@ -29,5 +37,6 @@ class MemberExtension extends DataExtension
     {
         $fields->removeByName('OneTimeCode');
         $fields->removeByName('OneTimeCodeExpiry');
+        $fields->removeByName('OneTimeCodeFailedAttempts');
     }
 }
