@@ -67,9 +67,10 @@ class OneTimeCodeLoginHandler extends LoginHandler
         if ($member) {
             $this->sendOneTimeCode($member);
 
-            $request->getSession()->set('OneTimeCodeSent', true);
-            $request->getSession()->set('OneTimeCodeEmail', $data['Email'] ?? '');
         }
+        
+        $request->getSession()->set('OneTimeCodeSent', true);
+        $request->getSession()->set('OneTimeCodeEmail', $data['Email'] ?? '');
 
         $form->sessionMessage('If you entered a registered email address, you will receive a one-time code shortly.', ValidationResult::TYPE_GOOD);
 
