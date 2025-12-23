@@ -72,7 +72,8 @@ class OneTimeCodeLoginForm extends LoginForm
                         ->addExtraClass('one-time-code')
                         ->setAttribute('maxlength', '1')
                         ->setAttribute('autocomplete', 'one-time-code'),
-                ]),
+                ])
+                    ->addExtraClass('one-time-code-group'),
                 LiteralField::create(
                     'Style',
                     '<style>
@@ -80,6 +81,10 @@ class OneTimeCodeLoginForm extends LoginForm
                             width: 43px!important;
                             font-size: 18px!important;
                             text-align: center;
+                        }
+                        .one-time-code-group {
+                            display: flex;
+                            gap: 8px;
                         }
                     </style>
                     <script>
