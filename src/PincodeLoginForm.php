@@ -9,7 +9,7 @@ use SilverStripe\Forms\FormAction;
 use SilverStripe\Forms\TextField;
 use SilverStripe\Security\LoginForm;
 
-class PincodeLoginForm extends LoginForm
+class OneTimeCodeLoginForm extends LoginForm
 {
     public function __construct(
         $controller,
@@ -37,14 +37,14 @@ class PincodeLoginForm extends LoginForm
 
     public function getAuthenticatorName(): string
     {
-        return 'Pincode Login';
+        return 'One Time Code';
     }
 
     protected function getFormFields(): FieldList
     {
-        if ($this->getRequest()->getSession()->get('PincodeSent')) {
+        if ($this->getRequest()->getSession()->get('OneTimeCodeSent')) {
             return FieldList::create([
-                TextField::create('Pincode', 'Pincode')
+                TextField::create('OneTimeCode', 'One Time Code')
             ]);
         }
         else {
@@ -56,14 +56,14 @@ class PincodeLoginForm extends LoginForm
 
     protected function getFormActions(): FieldList
     {
-        if ($this->getRequest()->getSession()->get('PincodeSent')) {
+        if ($this->getRequest()->getSession()->get('OneTimeCodeSent')) {
             return FieldList::create(
-                FormAction::create('doPincodeLogin', 'Log In')
+                FormAction::create('doOneTimeCodeLogin', 'Log In')
             );
         }
         else {
             return FieldList::create(
-                FormAction::create('doSendPincode', 'Send Pincode')
+                FormAction::create('doSendOneTimeCode', 'Send Code')
             );
         }
     }

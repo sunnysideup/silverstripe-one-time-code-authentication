@@ -12,7 +12,7 @@ use SilverStripe\Security\IdentityStore;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\MemberAuthenticator\MemberAuthenticator;
 
-class PincodeAuthenticator extends MemberAuthenticator
+class OneTimeCodeAuthenticator extends MemberAuthenticator
 {
     public function supportedServices(): int
     {
@@ -24,14 +24,14 @@ class PincodeAuthenticator extends MemberAuthenticator
         $member = Member::get()
             ->filter([
                 Member::config()->get('unique_identifier_field') ?? 'Email' => $data['Email'],
-                'Pincode' => $data['Pincode'],
-                'PincodeExpiry:GreaterThan' => DBDatetime::now(),
+                'OneTimeCode' => $data['OneTimeCode'],
+                'OneTimeCodeExpiry:GreaterThan' => DBDatetime::now(),
             ])
             ->first();
 
         if ($member) {
-            $member->Pincode = null;
-            $member->PincodeExpiry = '1970-01-01 00:00:00';
+            $member->OneTimeCode = null;
+            $member->OneTimeCodeExpiry = '1970-01-01 00:00:00';
             $member->write();
 
             $member->validateCanLogin($result);
@@ -51,13 +51,13 @@ class PincodeAuthenticator extends MemberAuthenticator
             }
         }
 
-        $result->addError('Invalid email or pincode.');
+        $result->addError('Invalid email or code.');
 
         return null;
     }
 
     public function getLoginHandler($link)
     {
-        return PincodeLoginHandler::create($link, $this);
+        return OneTimeCodeLoginHandler::create($link, $this);
     }
 }

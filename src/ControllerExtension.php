@@ -17,14 +17,14 @@ use SilverStripe\Security\Security;
 class ControllerExtension extends Extension
 {
     private static $allowed_actions = [
-        'PincodeLoginForm'
+        'OneTimeCodeLoginForm'
     ];
 
-    public function PincodeLoginForm()
+    public function OneTimeCodeLoginForm()
     {
         $controller = Injector::inst()->get(Security::class);
-        return Injector::inst()->get(PincodeAuthenticator::class)
-            ->getLoginHandler($controller->Link('login/pincode'))
+        return Injector::inst()->get(OneTimeCodeAuthenticator::class)
+            ->getLoginHandler($controller->Link('login/onetimecode'))
             ->loginForm();
     }
 }

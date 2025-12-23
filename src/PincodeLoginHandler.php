@@ -14,18 +14,18 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\MemberAuthenticator\LogoutHandler;
 use SilverStripe\Security\Security;
 
-class PincodeLoginHandler extends LoginHandler
+class OneTimeCodeLoginHandler extends LoginHandler
 {
     private static $allowed_actions = [
         'LoginForm',
     ];
 
-    public function doPincodeLogin($data, PincodeLoginForm $form, HTTPRequest $request): HTTPResponse
+    public function doOneTimeCodeLogin($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
-        $email = $request->getSession()->get('PincodeEmail');
+        $email = $request->getSession()->get('OneTimeCodeEmail');
 
-        $request->getSession()->clear('PincodeSent');
-        $request->getSession()->clear('PincodeEmail');
+        $request->getSession()->clear('OneTimeCodeSent');
+        $request->getSession()->clear('OneTimeCodeEmail');
 
         if (!$email) {
             $form->sessionMessage('Session expired.', ValidationResult::TYPE_ERROR);
@@ -34,8 +34,8 @@ class PincodeLoginHandler extends LoginHandler
 
         $data['Email'] = $email;
 
-        /** @var PincodeAuthenticator $authenticator */
-        $authenticator = Injector::inst()->create(PincodeAuthenticator::class);
+        /** @var OneTimeCodeAuthenticator $authenticator */
+        $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
         $member = $authenticator->authenticate($data, $request, $result);
         
         if ($member) {
@@ -56,8 +56,8 @@ class PincodeLoginHandler extends LoginHandler
 
         return $form->getRequestHandler()->redirectBackToForm();
     }
-    
-    public function doSendPincode($data, PincodeLoginForm $form, HTTPRequest $request): HTTPResponse
+
+    public function doSendOneTimeCode($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
         $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
         $member = Member::get()
@@ -65,32 +65,32 @@ class PincodeLoginHandler extends LoginHandler
             ->first();
 
         if ($member) {
-            $this->sendPincode($member);
+            $this->sendOneTimeCode($member);
 
-            $request->getSession()->set('PincodeSent', true);
-            $request->getSession()->set('PincodeEmail', $data['Email'] ?? '');
+            $request->getSession()->set('OneTimeCodeSent', true);
+            $request->getSession()->set('OneTimeCodeEmail', $data['Email'] ?? '');
         }
 
-        $form->sessionMessage('If you entered a registered email address, you will receive a pincode shortly.', ValidationResult::TYPE_GOOD);
+        $form->sessionMessage('If you entered a registered email address, you will receive a one-time code shortly.', ValidationResult::TYPE_GOOD);
 
         return $form->getRequestHandler()->redirectBackToForm();
     }
 
-    public function loginForm(): PincodeLoginForm
+    public function loginForm(): OneTimeCodeLoginForm
     {
-        return PincodeLoginForm::create($this, get_class($this->authenticator), 'LoginForm');
+        return OneTimeCodeLoginForm::create($this, get_class($this->authenticator), 'LoginForm');
     }
 
-    public function sendPincode(Member $member): void
+    public function sendOneTimeCode(Member $member): void
     {
-        $member->generatePincode();
+        $member->generateOneTimeCode();
 
         // If SMS sending is implemented, it would go here as an alternative to email.
 
         $email = Email::create()
-            ->setHTMLTemplate('Sunnysideup\\OneTimeCode\\Email\\PincodeLoginEmail')
+            ->setHTMLTemplate('Sunnysideup\\OneTimeCode\\Email\\OneTimeCodeLoginEmail')
             ->setData($member)
-            ->setSubject('Your login pincode')
+            ->setSubject('Your login one-time code')
             ->setTo($member->Email);
         if ($member->isInDB()) {
             $email->send();
