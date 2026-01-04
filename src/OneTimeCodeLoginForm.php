@@ -34,7 +34,6 @@ class OneTimeCodeLoginForm extends LoginForm
         $this->setFormMethod('POST', true);
 
         parent::__construct($controller, $name, $fields, $actions);
-
     }
 
     public function getAuthenticatorName(): string
@@ -45,35 +44,25 @@ class OneTimeCodeLoginForm extends LoginForm
     protected function getFormFields(): FieldList
     {
         if ($this->getRequest()->getSession()->get('OneTimeCodeSent')) {
+            $fields = [];
+
+            for ($i = 1; $i <= 6; $i++) {
+                $field = TextField::create('OneTimeCode' . $i, '')
+                    ->addExtraClass('one-time-code')
+                    ->setAttribute('maxlength', '1')
+                    ->setAttribute('autocomplete', 'one-time-code');
+
+                if ($i === 1) {
+                    $field->setAttribute('autofocus', 'autofocus');
+                }
+
+                $fields[] = $field;
+            }
+
+            $group = FieldGroup::create($fields)
+                ->addExtraClass('one-time-code-group');
             return FieldList::create([
-                FieldGroup::create([
-                    TextField::create('OneTimeCode1', '')
-                        ->addExtraClass('one-time-code')
-                        ->setAttribute('maxlength', '1')
-                        ->setAttribute('autocomplete', 'one-time-code')
-                        ->setAttribute('autofocus', 'autofocus'),
-                    TextField::create('OneTimeCode2', '')
-                        ->addExtraClass('one-time-code')
-                        ->setAttribute('maxlength', '1')
-                        ->setAttribute('autocomplete', 'one-time-code'),
-                    TextField::create('OneTimeCode3', '')
-                        ->addExtraClass('one-time-code')
-                        ->setAttribute('maxlength', '1')
-                        ->setAttribute('autocomplete', 'one-time-code'),
-                    TextField::create('OneTimeCode4', '')
-                        ->addExtraClass('one-time-code')
-                        ->setAttribute('maxlength', '1')
-                        ->setAttribute('autocomplete', 'one-time-code'),
-                    TextField::create('OneTimeCode5', '')
-                        ->addExtraClass('one-time-code')
-                        ->setAttribute('maxlength', '1')
-                        ->setAttribute('autocomplete', 'one-time-code'),
-                    TextField::create('OneTimeCode6', '')
-                        ->addExtraClass('one-time-code')
-                        ->setAttribute('maxlength', '1')
-                        ->setAttribute('autocomplete', 'one-time-code'),
-                ])
-                    ->addExtraClass('one-time-code-group'),
+                $group,
                 LiteralField::create(
                     'Style',
                     '<style>
@@ -134,18 +123,18 @@ class OneTimeCodeLoginForm extends LoginForm
                     '
                 )
             ]);
-        }
-        else {
-            $description = 'A one-time login code will be sent to this email address.';
+        } else {
             if (OneTimeCodeLoginHandler::config()->get('send_with_sms')) {
                 $description = 'A one-time login code will be sent to the phone number associated with this account.';
+            } else {
+                $description = 'A one-time login code will be sent to this email address.';
             }
             if (OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
-                $description .= '<br> Note: CMS users cannot log in using one-time codes.';
+                $description .= '<br>CMS users cannot log in using one-time codes.';
             }
             return FieldList::create([
-                TextField::create('Email', 'Email Address')
-                ->setDescription($description)
+                TextField::create('Email', 'Please enter your email address')
+                    ->setDescription($description)
             ]);
         }
     }
@@ -156,8 +145,7 @@ class OneTimeCodeLoginForm extends LoginForm
             return FieldList::create(
                 FormAction::create('doOneTimeCodeLogin', 'Log In')
             );
-        }
-        else {
+        } else {
             return FieldList::create(
                 FormAction::create('doSendOneTimeCode', 'Send Code')
             );

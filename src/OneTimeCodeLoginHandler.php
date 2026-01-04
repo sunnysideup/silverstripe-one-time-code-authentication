@@ -8,6 +8,7 @@ use SilverStripe\Control\Email\Email;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Configurable;
+use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\MFA\Authenticator\LoginHandler;
 use SilverStripe\ORM\ValidationResult;
@@ -29,7 +30,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
     public function doOneTimeCodeLogin($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
-        $email = $request->getSession()->get('OneTimeCodeEmail');
+        $email = Convert::raw2sql($request->getSession()->get('OneTimeCodeEmail') ?? '');
 
         if (!$email) {
             $form->sessionMessage('Session expired.', ValidationResult::TYPE_ERROR);
@@ -50,9 +51,9 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         // just get member by email to increment failed attempts
         $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
-        $memberByEmail = Member::get()
+        $memberByEmail = $email ? Member::get()
             ->filter([$identifierField => $email])
-            ->first();
+            ->first() : null;
 
         if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= self::config()->get('max_failed_attempts')) {
             $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
@@ -63,10 +64,11 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         /** @var OneTimeCodeAuthenticator $authenticator */
         $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
+        /**  @var  ValidationResult|null $result */
         $member = $authenticator->authenticate($data, $request, $result);
-        
+
         if ($member) {
-            if ($result->isValid()) {
+            if ($result && $result->isValid()) {
                 // Absolute redirection URLs may cause spoofing
                 $backURL = $this->getBackURL() ?: '/';
 
@@ -78,8 +80,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
                 return $this->redirect($backURL);
             }
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
-        }
-        else {
+        } else {
             $form->sessionMessage('Invalid one-time code.', ValidationResult::TYPE_ERROR);
         }
 
@@ -103,17 +104,13 @@ class OneTimeCodeLoginHandler extends LoginHandler
                 $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
                 return $form->getRequestHandler()->redirectBackToForm();
             }
-            if (Permission::checkMember($member, 'CMS_ACCESS') && OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
-                $form->sessionMessage('CMS users cannot log in using one-time codes.', ValidationResult::TYPE_ERROR);
-                return $form->getRequestHandler()->redirectBackToForm();
-            }
             $this->sendOneTimeCode($member);
         }
 
         $request->getSession()->set('OneTimeCodeSent', true);
         $request->getSession()->set('OneTimeCodeEmail', $data['Email'] ?? '');
 
-        $form->sessionMessage('If you entered a registered email address, you will receive a one-time code shortly.', ValidationResult::TYPE_GOOD);
+        $form->sessionMessage('Please check your email for code and enter code below. ', ValidationResult::TYPE_GOOD);
 
         return $form->getRequestHandler()->redirectBackToForm();
     }
@@ -128,7 +125,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
         $member->generateOneTimeCode();
 
         if (self::config()->get('send_with_sms')) {
-            // SMS integration is sitee-specific and must be implemented by the user.
+            // SMS integration is site-specific and must be implemented by the user.
             $this->extend('updateSendOneTimeCodeViaSMS', $member);
         } else {
             $email = Email::create()

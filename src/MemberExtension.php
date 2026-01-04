@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Sunnysideup\OneTimeCode;
 
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\ReadonlyField;
+use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataExtension;
 
 class MemberExtension extends DataExtension
@@ -35,8 +38,16 @@ class MemberExtension extends DataExtension
 
     public function updateCMSFields(FieldList $fields): void
     {
-        $fields->removeByName('OneTimeCode');
-        $fields->removeByName('OneTimeCodeExpiry');
-        $fields->removeByName('OneTimeCodeFailedAttempts');
+        $fields->addFieldsToTab(
+            'Root.Security',
+            [
+                ReadonlyField::create('OneTimeCode', 'One Time Code'),
+                LiteralField::create(
+                    'OneTimeCodeExpiryInfo',
+                    '<p class="help">The one-time code expires at: ' . ($this->owner->OneTimeCodeExpiry ?? 'n/a') . '</p>'
+                ),
+                TextField::create('OneTimeCodeFailedAttempts', 'One Time Code Failed Attempts'),
+            ]
+        );
     }
 }

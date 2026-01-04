@@ -51,9 +51,8 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
                     $identityStore->logIn($member, false, $request);
                     $member->registerSuccessfulLogin();
                     return $member;
-                }
-                else {
-                    $result->addError('CMS User Login is not allowed with One Time Code authentication.');
+                } else {
+                    $result->addError('CMS Users can not use the One Time Code authentication.');
                 }
             }
             $identityStore->logOut();
