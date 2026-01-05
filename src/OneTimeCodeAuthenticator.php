@@ -52,7 +52,12 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
                     $member->registerSuccessfulLogin();
                     return $member;
                 } else {
-                    $result->addError('CMS Users can not use the One Time Code authentication.');
+                    $result->addError(
+                        _t(
+                            __CLASS__ . '.CMS_USERS_CANNOT_LOGIN',
+                            'CMS Users can not use the One Time Code authentication.'
+                        )
+                    );
                 }
             }
             $identityStore->logOut();
@@ -60,7 +65,9 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
         }
 
         if ($result) {
-            $result->addError('Invalid email or code.');
+            $result->addError(
+                _t(__CLASS__ . '.INVALID_CODE_OR_EMAILS', 'Please check that your email and one-time code are correct.')
+            );
         }
 
         return null;

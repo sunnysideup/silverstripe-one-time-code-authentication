@@ -1,8 +1,13 @@
+---
+name: OneTimeCodeAuthentication
+After:
+  - "#coresecurity"
+---
 SilverStripe\Security\Member:
   extensions:
     - Sunnysideup\OneTimeCode\MemberExtension
 
-SilverStripe\CMS\Controllers\ContentController:
+SilverStripe\Security\Security:
   extensions:
     - Sunnysideup\OneTimeCode\ControllerExtension
 

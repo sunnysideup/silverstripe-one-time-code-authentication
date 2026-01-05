@@ -30,7 +30,7 @@ class MemberExtension extends Extension
     public function generateOneTimeCode(int $length = 6, int $expiryMinutes = 0): void
     {
         if ($expiryMinutes <= 0) {
-            $expiryMinutes = $this->getOwner()->get('one_time_code_expiry_minutes') ?: 15;
+            $expiryMinutes = (int) $this->getOwner()->config('one_time_code_expiry_minutes') ?: 15;
         }
         $oneTimeCode = '';
         for ($i = 0; $i < $length; $i++) {

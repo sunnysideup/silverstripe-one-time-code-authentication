@@ -43,7 +43,7 @@ class OneTimeCodeLoginForm extends LoginForm
 
     protected function getFormFields(): FieldList
     {
-        if ($this->getRequest()->getSession()->get('OneTimeCodeSent')) {
+        if ($this->codeSent()) {
             $fields = [];
 
             for ($i = 1; $i <= 6; $i++) {
@@ -125,15 +125,21 @@ class OneTimeCodeLoginForm extends LoginForm
             ]);
         } else {
             if (OneTimeCodeLoginHandler::config()->get('send_with_sms')) {
-                $description = 'A one-time login code will be sent to the phone number associated with this account.';
+                $description = _t(__CLASS__ . '.SMS_DESCRIPTION', 'A one-time login code will be sent to the phone number associated with this account.');
             } else {
-                $description = 'A one-time login code will be sent to this email address.';
+                $description = _t(__CLASS__ . '.EMAIL_DESCRIPTION', 'A one-time login code will be sent to this email address.');
             }
             if (OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
-                $description .= '<br>CMS users cannot log in using one-time codes.';
+                $description .= '<br>' . _t(__CLASS__ . '.CMS_USERS_CANNOT_LOGIN', 'CMS users cannot log in using one-time codes.');
             }
             return FieldList::create([
-                TextField::create('Email', 'Please enter your email address')
+                TextField::create(
+                    'Email',
+                    _t(__CLASS__ . '.EMAIL_LABEL', 'Please enter your email address')
+                )
+                    ->setAttribute('aria-describedby', 'description')
+                    ->setAttribute('autocomplete', 'email')
+                    ->setAttribute('required', 'required')
                     ->setDescription($description)
             ]);
         }
@@ -141,7 +147,7 @@ class OneTimeCodeLoginForm extends LoginForm
 
     protected function getFormActions(): FieldList
     {
-        if ($this->getRequest()->getSession()->get('OneTimeCodeSent')) {
+        if ($this->codeSent()) {
             return FieldList::create(
                 FormAction::create('doOneTimeCodeLogin', 'Log In')
             );
@@ -150,5 +156,10 @@ class OneTimeCodeLoginForm extends LoginForm
                 FormAction::create('doSendOneTimeCode', 'Send Code')
             );
         }
+    }
+
+    protected function codeSent(): bool
+    {
+        return (bool) $this->getRequest()->getSession()->get('OneTimeCodeSent');
     }
 }

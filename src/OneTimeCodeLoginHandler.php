@@ -27,6 +27,21 @@ class OneTimeCodeLoginHandler extends LoginHandler
         'LoginForm',
     ];
 
+
+    /**
+     * Return the MemberLoginForm form
+     *
+     * @return OneTimeCodeLoginForm
+     */
+    public function loginForm()
+    {
+        return OneTimeCodeLoginForm::create(
+            $this,
+            get_class($this->authenticator),
+            'LoginForm'
+        );
+    }
+
     public function doOneTimeCodeLogin($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
         $email = Convert::raw2sql($request->getSession()->get('OneTimeCodeEmail') ?? '');
@@ -55,7 +70,10 @@ class OneTimeCodeLoginHandler extends LoginHandler
             ->first() : null;
 
         if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= self::config()->get('max_failed_attempts')) {
-            $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
+            $form->sessionMessage(
+                _t(__CLASS__ . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
+                ValidationResult::TYPE_ERROR
+            );
             $request->getSession()->clear('OneTimeCodeSent');
             $request->getSession()->clear('OneTimeCodeEmail');
             return $form->getRequestHandler()->redirectBackToForm();
@@ -80,7 +98,10 @@ class OneTimeCodeLoginHandler extends LoginHandler
             }
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
         } else {
-            $form->sessionMessage('Invalid one-time code.', ValidationResult::TYPE_ERROR);
+            $form->sessionMessage(
+                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
+                ValidationResult::TYPE_ERROR
+            );
         }
 
         if ($memberByEmail) {
@@ -95,10 +116,16 @@ class OneTimeCodeLoginHandler extends LoginHandler
     {
         $outcome = Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
         if ($outcome === -1) {
-            $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
+            $form->sessionMessage(
+                _t(__CLASS__ . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
+                ValidationResult::TYPE_ERROR
+            );
             return $form->getRequestHandler()->redirectBackToForm();
         } else {
-            $form->sessionMessage('Please check your email for code and enter code below. ', ValidationResult::TYPE_GOOD);
+            $form->sessionMessage(
+                _t(__CLASS__ . '.ENTER_CODE_MESSAGE', 'Please check your email for a code and enter code below. '),
+                ValidationResult::TYPE_GOOD
+            );
         }
         return $form->getRequestHandler()->redirectBackToForm();
     }
