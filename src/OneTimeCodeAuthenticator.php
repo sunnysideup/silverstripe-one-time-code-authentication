@@ -39,7 +39,8 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
             $member->OneTimeCode = null;
             $member->OneTimeCodeExpiry = '1970-01-01 00:00:00';
             $member->write();
-
+            // @todo test with myResult... to avoid the message not being shown in the form in the end because
+            // the result is being overwritten here.
             $member->validateCanLogin($result);
             $this->recordLoginAttempt($data, $request, $member, $result->isValid());
 
@@ -60,13 +61,13 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
                     );
                 }
             }
-            $identityStore->logOut();
+            $identityStore->logOut($request);
             $member->registerFailedLogin();
+            return null;
         }
-
         if ($result) {
             $result->addError(
-                _t(__CLASS__ . '.INVALID_CODE_OR_EMAILS', 'Please check that your email and one-time code are correct.')
+                _t(__CLASS__ . '.INVALID_CODE_OR_EMAILS', 'Please check that your one-time code is correct.')
             );
         }
 

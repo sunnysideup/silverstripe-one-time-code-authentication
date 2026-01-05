@@ -48,12 +48,10 @@ class OneTimeCodeApi
                 return -1;
             }
             $member->generateOneTimeCode();
-            // fake the time it takes to send an email
-            sleep(rand(0, 2)); // to prevent user enumeration
             $this->SendOneTimeCodeInner($member);
         } else {
             // fake the time it takes to send an email
-            sleep(rand(1, 2)); // to prevent user enumeration
+            sleep(rand(0, 3)); // to prevent user enumeration
 
         }
         $request->getSession()->set('OneTimeCodeSent', true);

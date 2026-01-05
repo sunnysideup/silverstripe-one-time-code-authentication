@@ -29,7 +29,12 @@ class OneTimeCodeLoginForm extends LoginForm
         if (!$actions) {
             $actions = $this->getFormActions();
         }
-
+        $request = $controller?->getRequest();
+        $session = $request?->getSession();
+        $backURL = $controller->getRequest()->getVar('BackURL');
+        if ($backURL && $session && $request) {
+            $session->set('OneTimeCodeBackURL', $backURL);
+        }
         // Reduce attack surface by enforcing POST requests
         $this->setFormMethod('POST', true);
 
