@@ -22,7 +22,6 @@ class OneTimeCodeLoginHandler extends LoginHandler
     use Configurable;
 
     private static int $max_failed_attempts = 10;
-    private static bool $send_with_sms = false;
 
     private static $allowed_actions = [
         'LoginForm',
@@ -94,48 +93,13 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
     public function doSendOneTimeCode($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
-        $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
-        $member = Member::get()
-            ->filter([$identifierField => $data['Email'] ?? false])
-            ->first();
-
-        if ($member) {
-            if ($member->OneTimeCodeFailedAttempts >= self::config()->get('max_failed_attempts')) {
-                $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
-                return $form->getRequestHandler()->redirectBackToForm();
-            }
-            $this->sendOneTimeCode($member);
-        }
-
-        $request->getSession()->set('OneTimeCodeSent', true);
-        $request->getSession()->set('OneTimeCodeEmail', $data['Email'] ?? '');
-
-        $form->sessionMessage('Please check your email for code and enter code below. ', ValidationResult::TYPE_GOOD);
-
-        return $form->getRequestHandler()->redirectBackToForm();
-    }
-
-    public function loginForm(): OneTimeCodeLoginForm
-    {
-        return OneTimeCodeLoginForm::create($this, get_class($this->authenticator), 'LoginForm');
-    }
-
-    public function sendOneTimeCode(Member $member): void
-    {
-        $member->generateOneTimeCode();
-
-        if (self::config()->get('send_with_sms')) {
-            // SMS integration is site-specific and must be implemented by the user.
-            $this->extend('updateSendOneTimeCodeViaSMS', $member);
+        $outcome = Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
+        if ($outcome === -1) {
+            $form->sessionMessage('Too many failed attempts to log in using one-time codes. Please log in using your email and password.', ValidationResult::TYPE_ERROR);
+            return $form->getRequestHandler()->redirectBackToForm();
         } else {
-            $email = Email::create()
-                ->setHTMLTemplate('Sunnysideup\\OneTimeCode\\Email\\OneTimeCodeLoginEmail')
-                ->setData($member)
-                ->setSubject('Your login one-time code')
-                ->setTo($member->Email);
-            if ($member->isInDB()) {
-                $email->send();
-            }
+            $form->sessionMessage('Please check your email for code and enter code below. ', ValidationResult::TYPE_GOOD);
         }
+        return $form->getRequestHandler()->redirectBackToForm();
     }
 }

@@ -8,9 +8,9 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextField;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 
-class MemberExtension extends DataExtension
+class MemberExtension extends Extension
 {
     private static array $db = [
         'OneTimeCode' => 'Varchar(6)',
@@ -25,8 +25,13 @@ class MemberExtension extends DataExtension
         $this->owner->write();
     }
 
-    public function generateOneTimeCode(int $length = 6, int $expiryMinutes = 15): void
+    private static $one_time_code_expiry_minutes = 15;
+
+    public function generateOneTimeCode(int $length = 6, int $expiryMinutes = 0): void
     {
+        if ($expiryMinutes <= 0) {
+            $expiryMinutes = $this->getOwner()->get('one_time_code_expiry_minutes') ?: 15;
+        }
         $oneTimeCode = '';
         for ($i = 0; $i < $length; $i++) {
             $oneTimeCode .= random_int(0, 9);
