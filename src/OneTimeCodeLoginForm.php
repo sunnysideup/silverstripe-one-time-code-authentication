@@ -134,9 +134,9 @@ class OneTimeCodeLoginForm extends LoginForm
             } else {
                 $description = _t(__CLASS__ . '.EMAIL_DESCRIPTION', 'A one-time login code will be sent to this email address.');
             }
-            if (OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
-                $description .= '<br>' . _t(__CLASS__ . '.CMS_USERS_CANNOT_LOGIN', 'CMS users cannot log in using one-time codes.');
-            }
+            // if (OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
+            //     $description .= '<br>' . _t(__CLASS__ . '.CMS_USERS_CANNOT_LOGIN', 'CMS users cannot log in using one-time codes.');
+            // }
             return FieldList::create([
                 TextField::create(
                     'Email',
