@@ -9,6 +9,7 @@ use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextField;
 use SilverStripe\Core\Extension;
+use SilverStripe\Forms\NumericField;
 
 class MemberExtension extends Extension
 {
@@ -51,7 +52,7 @@ class MemberExtension extends Extension
                     'OneTimeCodeExpiryInfo',
                     '<p class="help">The one-time code expires at: ' . ($this->owner->OneTimeCodeExpiry ?? 'n/a') . '</p>'
                 ),
-                TextField::create('OneTimeCodeFailedAttempts', 'One Time Code Failed Attempts'),
+                NumericField::create('OneTimeCodeFailedAttempts', 'One Time Code Failed Attempts'),
             ]
         );
     }
