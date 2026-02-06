@@ -18,8 +18,7 @@ class OneTimeCodeLoginForm extends LoginForm
         $authenticatorClass,
         $name,
         $fields = null,
-        $actions = null,
-        $checkCurrentUser = true
+        $actions = null
     ) {
         $this->setController($controller);
         $this->setAuthenticatorClass($authenticatorClass);

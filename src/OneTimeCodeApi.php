@@ -28,8 +28,6 @@ class OneTimeCodeApi
      * returns 0 on failure
      * returns 1 on success
      * @param array $data - should contain 'Email' OR Phone
-     * @param HTTPRequest $request
-     * @return int
      */
     public function SendOneTimeCode(array $data, HTTPRequest $request): int
     {
