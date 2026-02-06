@@ -17,7 +17,7 @@ use SilverStripe\Security\Security;
 class ControllerExtension extends Extension
 {
     private static $allowed_actions = [
-        'OneTimeCodeLoginForm'
+        'OneTimeCodeLoginForm',
     ];
 
     public function OneTimeCodeLoginForm()

@@ -14,7 +14,6 @@ use SilverStripe\MFA\Authenticator\LoginHandler;
 use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\MemberAuthenticator\LogoutHandler;
-use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 
 class OneTimeCodeLoginHandler extends LoginHandler
@@ -26,7 +25,6 @@ class OneTimeCodeLoginHandler extends LoginHandler
     private static $allowed_actions = [
         'LoginForm',
     ];
-
 
     /**
      * Return the MemberLoginForm form
@@ -48,13 +46,12 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         $email = Convert::raw2sql($request->getSession()->get('OneTimeCodeEmail') ?? '');
 
-        if (!$email) {
+        if (! $email) {
             $form->sessionMessage('Session expired.', ValidationResult::TYPE_ERROR);
             $request->getSession()->clear('OneTimeCodeSent');
             $request->getSession()->clear('OneTimeCodeEmail');
             return $form->getRequestHandler()->redirectBackToForm();
         }
-
 
         $data['Email'] = $email;
 
@@ -85,7 +82,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         /** @var OneTimeCodeAuthenticator $authenticator */
         $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
-        /**  @var  ValidationResult|null $result */
+        /** @var ValidationResult|null $result */
         $result = ValidationResult::create();
         $member = $authenticator->authenticate($data, $request, $result);
         if ($member && $member instanceof Member) {

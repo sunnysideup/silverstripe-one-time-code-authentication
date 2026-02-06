@@ -23,7 +23,6 @@ class OneTimeCodeApi
     private static bool $send_with_sms = false;
 
     /**
-     *
      * return -1 when max attempts has been exceeded.
      * returns 0 on failure
      * returns 1 on success
@@ -32,7 +31,7 @@ class OneTimeCodeApi
     public function SendOneTimeCode(array $data, HTTPRequest $request): int
     {
         $email = Convert::raw2sql($data['Email'] ?? '');
-        if (!$email) {
+        if (! $email) {
             return 0;
         }
         $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';

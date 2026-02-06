@@ -22,10 +22,10 @@ class OneTimeCodeLoginForm extends LoginForm
     ) {
         $this->setController($controller);
         $this->setAuthenticatorClass($authenticatorClass);
-        if (!$fields) {
+        if (! $fields) {
             $fields = $this->getFormFields();
         }
-        if (!$actions) {
+        if (! $actions) {
             $actions = $this->getFormActions();
         }
         $request = $controller?->getRequest();
@@ -125,7 +125,7 @@ class OneTimeCodeLoginForm extends LoginForm
                         });
                     </script>
                     '
-                )
+                ),
             ]);
         } else {
             if (OneTimeCodeLoginHandler::config()->get('send_with_sms')) {
@@ -144,7 +144,7 @@ class OneTimeCodeLoginForm extends LoginForm
                     ->setAttribute('aria-describedby', 'description')
                     ->setAttribute('autocomplete', 'email')
                     ->setAttribute('required', 'required')
-                    ->setDescription($description)
+                    ->setDescription($description),
             ]);
         }
     }

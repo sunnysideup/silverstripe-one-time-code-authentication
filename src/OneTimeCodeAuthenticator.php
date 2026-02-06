@@ -48,7 +48,7 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
             $identityStore = Injector::inst()->get(IdentityStore::class);
 
             if ($result->isValid()) {
-                if (self::config()->get('can_login_to_cms') || !Permission::checkMember($member, 'CMS_ACCESS')) {
+                if (self::config()->get('can_login_to_cms') || ! Permission::checkMember($member, 'CMS_ACCESS')) {
                     $identityStore->logIn($member, false, $request);
                     $member->registerSuccessfulLogin();
                     return $member;

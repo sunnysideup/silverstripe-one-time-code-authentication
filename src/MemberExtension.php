@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Sunnysideup\OneTimeCode;
 
+use SilverStripe\Core\Extension;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
-use SilverStripe\Forms\ReadonlyField;
-use SilverStripe\Forms\TextField;
-use SilverStripe\Core\Extension;
 use SilverStripe\Forms\NumericField;
+use SilverStripe\Forms\ReadonlyField;
 
 class MemberExtension extends Extension
 {
