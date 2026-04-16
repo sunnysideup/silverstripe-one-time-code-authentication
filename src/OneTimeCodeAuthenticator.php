@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunnysideup\OneTimeCode;
 
+use Override;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
@@ -20,11 +21,13 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
 
     private static bool $can_login_to_cms = false;
 
+    #[Override]
     public function supportedServices(): int
     {
         return Authenticator::LOGIN;
     }
 
+    #[Override]
     public function authenticate(array $data, HTTPRequest $request, &$result = null): Member|null
     {
         $member = Member::get()
@@ -55,25 +58,28 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
                 } else {
                     $result->addError(
                         _t(
-                            __CLASS__ . '.CMS_USERS_CANNOT_LOGIN',
+                            self::class . '.CMS_USERS_CANNOT_LOGIN',
                             'CMS Users can not use the One Time Code authentication.'
                         )
                     );
                 }
             }
+
             $identityStore->logOut($request);
             $member->registerFailedLogin();
             return null;
         }
+
         if ($result) {
             $result->addError(
-                _t(__CLASS__ . '.INVALID_CODE_OR_EMAILS', 'Please check that your one-time code is correct.')
+                _t(self::class . '.INVALID_CODE_OR_EMAILS', 'Please check that your one-time code is correct.')
             );
         }
 
         return null;
     }
 
+    #[Override]
     public function getLoginHandler($link)
     {
         return OneTimeCodeLoginHandler::create($link, $this);
