@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Sunnysideup\OneTimeCode;
 
-use SilverStripe\Control\Email\Email;
+use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\MFA\Authenticator\LoginHandler;
-use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\MemberAuthenticator\LogoutHandler;
 use SilverStripe\Security\Security;
@@ -35,7 +34,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
     {
         return OneTimeCodeLoginForm::create(
             $this,
-            get_class($this->authenticator),
+            $this->authenticator::class,
             'LoginForm'
         );
     }
@@ -61,6 +60,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
             $oneTimeCodePart = $data['OneTimeCode' . $i] ?? '';
             $oneTimeCode .= $oneTimeCodePart;
         }
+
         $data['OneTimeCode'] = $oneTimeCode;
 
         // just get member by email to increment failed attempts
@@ -72,7 +72,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
         $max = self::config()->get('max_failed_attempts');
         if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= $max) {
             $form->sessionMessage(
-                _t(__CLASS__ . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
+                _t(self::class . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
                 ValidationResult::TYPE_ERROR
             );
             $session->clear('OneTimeCodeSent');
@@ -82,7 +82,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         /** @var OneTimeCodeAuthenticator $authenticator */
         $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
-        /** @var ValidationResult|null $result */
+        /** @var \SilverStripe\Core\Validation\ValidationResult|null $result */
         $result = ValidationResult::create();
         $member = $authenticator->authenticate($data, $request, $result);
         if ($member && $member instanceof Member) {
@@ -104,12 +104,12 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
             $form->sessionMessage(
-                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
+                _t(self::class . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
                 ValidationResult::TYPE_ERROR
             );
         } else {
             $form->sessionMessage(
-                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
+                _t(self::class . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
                 ValidationResult::TYPE_ERROR
             );
         }
@@ -118,6 +118,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
             $memberByEmail->OneTimeCodeFailedAttempts += 1;
             $memberByEmail->write();
         }
+
         $form->setSessionValidationResult($result);
         return $form->getRequestHandler()->redirectBackToForm();
     }
@@ -127,16 +128,17 @@ class OneTimeCodeLoginHandler extends LoginHandler
         $outcome = Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
         if ($outcome === -1) {
             $form->sessionMessage(
-                _t(__CLASS__ . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
+                _t(self::class . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
                 ValidationResult::TYPE_ERROR
             );
             return $form->getRequestHandler()->redirectBackToForm();
         } else {
             $form->sessionMessage(
-                _t(__CLASS__ . '.ENTER_CODE_MESSAGE', 'Please check your email for a code and enter code below. '),
+                _t(self::class . '.ENTER_CODE_MESSAGE', 'Please check your email for a code and enter code below. '),
                 ValidationResult::TYPE_GOOD
             );
         }
+
         return $form->getRequestHandler()->redirectBackToForm();
     }
 }
