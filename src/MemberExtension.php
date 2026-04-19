@@ -18,11 +18,11 @@ class MemberExtension extends Extension
         'OneTimeCodeFailedAttempts' => 'Int',
     ];
 
-    public function afterMemberLoggedIn(): void
+    public function onAfterMemberLoggedIn(): void
     {
         // reset failed attempts on successful login
-        $this->owner->OneTimeCodeFailedAttempts = 0;
-        $this->owner->write();
+        $this->getOwner()->OneTimeCodeFailedAttempts = 0;
+        $this->getOwner()->write();
     }
 
     private static $one_time_code_expiry_minutes = 15;
@@ -32,13 +32,15 @@ class MemberExtension extends Extension
         if ($expiryMinutes <= 0) {
             $expiryMinutes = (int) $this->getOwner()->config()->get('one_time_code_expiry_minutes') ?: 15;
         }
+
         $oneTimeCode = '';
         for ($i = 0; $i < $length; $i++) {
             $oneTimeCode .= random_int(0, 9);
         }
-        $this->owner->OneTimeCode = $oneTimeCode;
-        $this->owner->OneTimeCodeExpiry = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
-        $this->owner->write();
+
+        $this->getOwner()->OneTimeCode = $oneTimeCode;
+        $this->getOwner()->OneTimeCodeExpiry = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
+        $this->getOwner()->write();
     }
 
     public function updateCMSFields(FieldList $fields): void
@@ -49,7 +51,7 @@ class MemberExtension extends Extension
                 ReadonlyField::create('OneTimeCode', 'One Time Code'),
                 LiteralField::create(
                     'OneTimeCodeExpiryInfo',
-                    '<p class="help">The one-time code expires at: ' . ($this->owner->OneTimeCodeExpiry ?? 'n/a') . '</p>'
+                    '<p class="help">The one-time code expires at: ' . ($this->getOwner()->OneTimeCodeExpiry ?? 'n/a') . '</p>'
                 ),
                 NumericField::create('OneTimeCodeFailedAttempts', 'One Time Code Failed Attempts'),
             ]

@@ -34,6 +34,7 @@ class OneTimeCodeApi
         if (! $email) {
             return 0;
         }
+
         $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
         $member = Member::get()
             ->filter([$identifierField => $email])
@@ -44,13 +45,15 @@ class OneTimeCodeApi
             if ($member->OneTimeCodeFailedAttempts >= $max) {
                 return -1;
             }
+
             $member->generateOneTimeCode();
             $this->SendOneTimeCodeInner($member);
         } else {
             // fake the time it takes to send an email
-            sleep(rand(0, 3)); // to prevent user enumeration
+            sleep(random_int(0, 3)); // to prevent user enumeration
 
         }
+
         $request->getSession()->set('OneTimeCodeSent', true);
         $request->getSession()->set('OneTimeCodeEmail', $email);
         return 1;

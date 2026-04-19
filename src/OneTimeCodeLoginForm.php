@@ -25,15 +25,18 @@ class OneTimeCodeLoginForm extends LoginForm
         if (! $fields) {
             $fields = $this->getFormFields();
         }
+
         if (! $actions) {
             $actions = $this->getFormActions();
         }
+
         $request = $controller?->getRequest();
         $session = $request?->getSession();
         $backURL = $controller->getRequest()->getVar('BackURL');
         if ($backURL && $session && $request) {
             $session->set('OneTimeCodeBackURL', $backURL);
         }
+
         // Reduce attack surface by enforcing POST requests
         $this->setFormMethod('POST', true);
 
@@ -129,17 +132,18 @@ class OneTimeCodeLoginForm extends LoginForm
             ]);
         } else {
             if (OneTimeCodeLoginHandler::config()->get('send_with_sms')) {
-                $description = _t(__CLASS__ . '.SMS_DESCRIPTION', 'A one-time login code will be sent to the phone number associated with this account.');
+                $description = _t(self::class . '.SMS_DESCRIPTION', 'A one-time login code will be sent to the phone number associated with this account.');
             } else {
-                $description = _t(__CLASS__ . '.EMAIL_DESCRIPTION', 'A one-time login code will be sent to this email address.');
+                $description = _t(self::class . '.EMAIL_DESCRIPTION', 'A one-time login code will be sent to this email address.');
             }
+
             // if (OneTimeCodeAuthenticator::config()->get('can_login_to_cms') === false) {
             //     $description .= '<br>' . _t(__CLASS__ . '.CMS_USERS_CANNOT_LOGIN', 'CMS users cannot log in using one-time codes.');
             // }
             return FieldList::create([
                 TextField::create(
                     'Email',
-                    _t(__CLASS__ . '.EMAIL_LABEL', 'Please enter your email address')
+                    _t(self::class . '.EMAIL_LABEL', 'Please enter your email address')
                 )
                     ->setAttribute('aria-describedby', 'description')
                     ->setAttribute('autocomplete', 'email')
