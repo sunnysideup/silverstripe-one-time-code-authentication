@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunnysideup\OneTimeCode;
 
+use Override;
 use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
@@ -30,6 +31,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
      *
      * @return OneTimeCodeLoginForm
      */
+    #[Override]
     public function loginForm()
     {
         return OneTimeCodeLoginForm::create(
@@ -82,7 +84,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         /** @var OneTimeCodeAuthenticator $authenticator */
         $authenticator = Injector::inst()->create(OneTimeCodeAuthenticator::class);
-        /** @var \SilverStripe\Core\Validation\ValidationResult|null $result */
+        /** @var ValidationResult|null $result */
         $result = ValidationResult::create();
         $member = $authenticator->authenticate($data, $request, $result);
         if ($member && $member instanceof Member) {
