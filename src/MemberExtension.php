@@ -45,6 +45,9 @@ class MemberExtension extends Extension
 
     public function updateCMSFields(FieldList $fields): void
     {
+        $fields->removeByName('OneTimeCode');
+        $fields->removeByName('OneTimeCodeExpiry');
+        $fields->removeByName('OneTimeCodeFailedAttempts');
         $fields->addFieldsToTab(
             'Root.Security',
             [
