@@ -50,7 +50,7 @@ class OneTimeCodeLoginForm extends LoginForm
         if ($this->codeSent()) {
             $fields = [];
 
-            $codeLength = (int) \SilverStripe\Security\Member::config()->get('one_time_code_length') ?: 8;
+            $codeLength = (int) \SilverStripe\Security\Member::config()->get('one_time_code_length') ?: 9;
             for ($i = 1; $i <= $codeLength; $i++) {
                 $field = TextField::create('OneTimeCode' . $i, '')
                     ->addExtraClass('one-time-code')
@@ -72,13 +72,18 @@ class OneTimeCodeLoginForm extends LoginForm
                     'Style',
                     '<style>
                         .one-time-code {
-                            width: 43px!important;
+                            width: clamp(28px, 9vw, 43px)!important;
+                            min-width: 0!important;
+                            padding-left: 0!important;
+                            padding-right: 0!important;
                             font-size: 18px!important;
                             text-align: center;
                         }
                         .one-time-code-group {
                             display: flex;
-                            gap: 8px;
+                            gap: 6px;
+                            flex-wrap: nowrap;
+                            max-width: 100%;
                         }
                     </style>
                     <script>

@@ -39,12 +39,12 @@ class MemberExtension extends Extension
 
     private static int $one_time_code_resend_cooldown_seconds = 60;
 
-    private static int $one_time_code_length = 8;
+    private static int $one_time_code_length = 9;
 
     public function generateOneTimeCode(int $length = 0, int $expiryMinutes = 0): string
     {
         if ($length <= 0) {
-            $length = (int) $this->getOwner()->config()->get('one_time_code_length') ?: 8;
+            $length = (int) $this->getOwner()->config()->get('one_time_code_length') ?: 9;
         }
         if ($expiryMinutes <= 0) {
             $expiryMinutes = (int) $this->getOwner()->config()->get('one_time_code_expiry_minutes') ?: 15;

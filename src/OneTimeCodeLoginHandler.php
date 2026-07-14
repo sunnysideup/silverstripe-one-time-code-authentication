@@ -56,7 +56,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
         $data['Email'] = $email;
 
         //put together one time code from the individual front-end fields
-        $codeLength = (int) Member::config()->get('one_time_code_length') ?: 8;
+        $codeLength = (int) Member::config()->get('one_time_code_length') ?: 9;
         $oneTimeCode = '';
         for ($i = 1; $i <= $codeLength; ++$i) {
             $oneTimeCodePart = $data['OneTimeCode' . $i] ?? '';
