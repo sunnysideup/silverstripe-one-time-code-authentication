@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Sunnysideup\OneTimeCode;
 
-use Override;
-use SilverStripe\Core\Validation\ValidationResult;
+use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\MFA\Authenticator\LoginHandler;
+use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Member;
-use SilverStripe\Security\MemberAuthenticator\LoginHandler;
 use SilverStripe\Security\MemberAuthenticator\LogoutHandler;
 use SilverStripe\Security\Security;
 
@@ -31,12 +31,11 @@ class OneTimeCodeLoginHandler extends LoginHandler
      *
      * @return OneTimeCodeLoginForm
      */
-    #[Override]
     public function loginForm()
     {
         return OneTimeCodeLoginForm::create(
             $this,
-            $this->authenticator::class,
+            get_class($this->authenticator),
             'LoginForm'
         );
     }
@@ -56,13 +55,13 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         $data['Email'] = $email;
 
-        //put together one time code from six front-end fields
+        //put together one time code from the individual front-end fields
+        $codeLength = (int) Member::config()->get('one_time_code_length') ?: 8;
         $oneTimeCode = '';
-        for ($i = 1; $i <= 6; ++$i) {
+        for ($i = 1; $i <= $codeLength; ++$i) {
             $oneTimeCodePart = $data['OneTimeCode' . $i] ?? '';
             $oneTimeCode .= $oneTimeCodePart;
         }
-
         $data['OneTimeCode'] = $oneTimeCode;
 
         // just get member by email to increment failed attempts
@@ -73,8 +72,10 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
         $max = self::config()->get('max_failed_attempts');
         if ($memberByEmail && $memberByEmail->OneTimeCodeFailedAttempts >= $max) {
+            // Use the same generic message as an invalid code so that a locked
+            // account cannot be distinguished from an unknown email (enumeration).
             $form->sessionMessage(
-                _t(self::class . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
+                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
                 ValidationResult::TYPE_ERROR
             );
             $session->clear('OneTimeCodeSent');
@@ -89,9 +90,10 @@ class OneTimeCodeLoginHandler extends LoginHandler
         $member = $authenticator->authenticate($data, $request, $result);
         if ($member && $member instanceof Member) {
             if ($result && $result->isValid()) {
+                // Absolute/off-site redirection URLs may cause spoofing, so only
+                // honour the stored BackURL if it points at this site.
                 $backURL = $session->get('OneTimeCodeBackURL');
-                // Absolute redirection URLs may cause spoofing
-                if (! $backURL) {
+                if (! $backURL || ! Director::is_site_url($backURL)) {
                     $backURL = $this->getBackURL() ?: '/';
 
                     // If a default login dest has been set, redirect to that.
@@ -106,12 +108,12 @@ class OneTimeCodeLoginHandler extends LoginHandler
 
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
             $form->sessionMessage(
-                _t(self::class . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
+                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
                 ValidationResult::TYPE_ERROR
             );
         } else {
             $form->sessionMessage(
-                _t(self::class . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
+                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
                 ValidationResult::TYPE_ERROR
             );
         }
@@ -120,27 +122,20 @@ class OneTimeCodeLoginHandler extends LoginHandler
             $memberByEmail->OneTimeCodeFailedAttempts += 1;
             $memberByEmail->write();
         }
-
         $form->setSessionValidationResult($result);
         return $form->getRequestHandler()->redirectBackToForm();
     }
 
     public function doSendOneTimeCode($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
-        $outcome = Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
-        if ($outcome === -1) {
-            $form->sessionMessage(
-                _t(self::class . '.TOO_MANY_ATTEMPTS_MESSAGE', 'Too many failed attempts to log in using one-time codes. Please log in using your email and password.'),
-                ValidationResult::TYPE_ERROR
-            );
-            return $form->getRequestHandler()->redirectBackToForm();
-        } else {
-            $form->sessionMessage(
-                _t(self::class . '.ENTER_CODE_MESSAGE', 'Please check your email for a code and enter code below. '),
-                ValidationResult::TYPE_GOOD
-            );
-        }
-
+        // Always show the same neutral message regardless of whether the email
+        // matches an account, is rate-limited, or is locked out. This prevents
+        // account enumeration via the send-code response.
+        Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
+        $form->sessionMessage(
+            _t(__CLASS__ . '.ENTER_CODE_MESSAGE', 'If an account matches that email address, a one-time code has been sent. Please enter it below.'),
+            ValidationResult::TYPE_GOOD
+        );
         return $form->getRequestHandler()->redirectBackToForm();
     }
 }

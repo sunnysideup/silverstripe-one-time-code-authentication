@@ -34,29 +34,52 @@ class OneTimeCodeApi
         if (! $email) {
             return 0;
         }
-
         $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
         $member = Member::get()
             ->filter([$identifierField => $email])
             ->first();
 
+        $outcome = 1;
         if ($member) {
             $max = OneTimeCodeLoginHandler::config()->get('max_failed_attempts');
             if ($member->OneTimeCodeFailedAttempts >= $max) {
-                return -1;
+                // Locked out: do not send, but do not reveal this to the caller.
+                $outcome = -1;
+            } elseif ($this->withinResendCooldown($member)) {
+                // Rate-limited: silently skip re-sending to prevent email bombing
+                // and rapid brute-force code cycling.
+                $outcome = 1;
+            } else {
+                $member->generateOneTimeCode();
+                $this->SendOneTimeCodeInner($member);
             }
-
-            $member->generateOneTimeCode();
-            $this->SendOneTimeCodeInner($member);
         } else {
             // fake the time it takes to send an email
-            sleep(random_int(0, 3)); // to prevent user enumeration
-
+            sleep(rand(0, 3)); // to prevent user enumeration
         }
 
+        // Always mark the session the same way so the code-entry form is shown
+        // regardless of whether the email matched, preventing enumeration.
         $request->getSession()->set('OneTimeCodeSent', true);
         $request->getSession()->set('OneTimeCodeEmail', $email);
-        return 1;
+        return $outcome;
+    }
+
+    /**
+     * True when a code was sent to this member more recently than the configured
+     * cooldown window.
+     */
+    protected function withinResendCooldown(Member $member): bool
+    {
+        $cooldown = (int) $member->config()->get('one_time_code_resend_cooldown_seconds');
+        if ($cooldown <= 0) {
+            return false;
+        }
+        $lastSent = $member->OneTimeCodeLastSent;
+        if (! $lastSent) {
+            return false;
+        }
+        return (time() - strtotime((string) $lastSent)) < $cooldown;
     }
 
     public function SendOneTimeCodeInner(?Member $member = null): void
