@@ -31,8 +31,9 @@ class MemberExtension extends Extension
     public function afterMemberLoggedIn(): void
     {
         // reset failed attempts on successful login
-        $this->owner->OneTimeCodeFailedAttempts = 0;
-        $this->owner->write();
+        $owner = $this->getOwner();
+        $owner->OneTimeCodeFailedAttempts = 0;
+        $owner->write();
     }
 
     private static $one_time_code_expiry_minutes = 15;
@@ -43,11 +44,13 @@ class MemberExtension extends Extension
 
     public function generateOneTimeCode(int $length = 0, int $expiryMinutes = 0): string
     {
+        $owner = $this->getOwner();
+
         if ($length <= 0) {
-            $length = (int) $this->getOwner()->config()->get('one_time_code_length') ?: 9;
+            $length = (int) $owner->config()->get('one_time_code_length') ?: 9;
         }
         if ($expiryMinutes <= 0) {
-            $expiryMinutes = (int) $this->getOwner()->config()->get('one_time_code_expiry_minutes') ?: 15;
+            $expiryMinutes = (int) $owner->config()->get('one_time_code_expiry_minutes') ?: 15;
         }
         $oneTimeCode = '';
         for ($i = 0; $i < $length; $i++) {
@@ -55,10 +58,10 @@ class MemberExtension extends Extension
         }
         $this->plainOneTimeCode = $oneTimeCode;
         // Persist only a hash so the live code cannot be read from the DB (or CMS).
-        $this->owner->OneTimeCode = $this->owner->hashOneTimeCode($oneTimeCode);
-        $this->owner->OneTimeCodeExpiry = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
-        $this->owner->OneTimeCodeLastSent = date('Y-m-d H:i:s');
-        $this->owner->write();
+        $owner->OneTimeCode = $owner->hashOneTimeCode($oneTimeCode);
+        $owner->OneTimeCodeExpiry = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
+        $owner->OneTimeCodeLastSent = date('Y-m-d H:i:s');
+        $owner->write();
         return $oneTimeCode;
     }
 
@@ -95,6 +98,8 @@ class MemberExtension extends Extension
 
     public function updateCMSFields(FieldList $fields): void
     {
+        $owner = $this->getOwner();
+
         $fields->addFieldsToTab(
             'Root.Security',
             [
@@ -103,7 +108,7 @@ class MemberExtension extends Extension
                 LiteralField::create(
                     'OneTimeCodeExpiryInfo',
                     '<p class="help">The current one-time code (if any) expires at: '
-                        . ($this->owner->OneTimeCodeExpiry ?: 'n/a') . '</p>'
+                        . ($owner->OneTimeCodeExpiry ?: 'n/a') . '</p>'
                 ),
                 NumericField::create('OneTimeCodeFailedAttempts', 'One Time Code Failed Attempts'),
             ]
