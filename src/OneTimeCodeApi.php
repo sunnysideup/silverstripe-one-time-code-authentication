@@ -23,14 +23,25 @@ class OneTimeCodeApi
     private static bool $send_with_sms = false;
 
     /**
-     * return -1 when max attempts has been exceeded.
+     * When the email address does not belong to a member, we wait a moment before we respond,
+     * so that the response does not come back (much) faster than when an email is sent.
+     * Keep this short: the PHP process is busy while it waits.
+     */
+    private static int $unknown_email_delay_milliseconds = 300;
+
+    /**
      * returns 0 on failure
      * returns 1 on success
      * @param array $data - should contain 'Email' OR Phone
      */
     public function SendOneTimeCode(array $data, HTTPRequest $request): int
     {
-        $email = Convert::raw2sql($data['Email'] ?? '');
+        // the email has to be a single value (not e.g. an array)
+        if (! is_string($data['Email'] ?? null)) {
+            return 0;
+        }
+
+        $email = Convert::raw2sql($data['Email']);
         if (! $email) {
             return 0;
         }
@@ -41,11 +52,10 @@ class OneTimeCodeApi
 
         $outcome = 1;
         if ($member) {
-            $max = OneTimeCodeLoginHandler::config()->get('max_failed_attempts');
-            if ($member->OneTimeCodeFailedAttempts >= $max) {
-                // Locked out: do not send, but do not reveal this to the caller.
-                $outcome = -1;
-            } elseif ($this->withinResendCooldown($member)) {
+            // NB: there is no "locked out" state: failed attempts are counted per code
+            // (see OneTimeCodeLoginHandler) and a new code starts with a clean slate.
+            // Otherwise anyone could lock any member out by entering wrong codes.
+            if ($this->withinResendCooldown($member)) {
                 // Rate-limited: silently skip re-sending to prevent email bombing
                 // and rapid brute-force code cycling.
                 $outcome = 1;
@@ -54,8 +64,13 @@ class OneTimeCodeApi
                 $this->SendOneTimeCodeInner($member);
             }
         } else {
-            // fake the time it takes to send an email
-            sleep(rand(0, 3)); // to prevent user enumeration
+            // fake (part of) the time it takes to send an email, to make it harder to find out
+            // which email addresses have an account. This is a short, fixed wait on purpose:
+            // long or random waits would let anyone tie up the web server with lots of requests.
+            $delay = (int) $this->config()->get('unknown_email_delay_milliseconds');
+            if ($delay > 0) {
+                usleep($delay * 1000);
+            }
         }
 
         // Always mark the session the same way so the code-entry form is shown

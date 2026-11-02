@@ -63,6 +63,9 @@ class MemberExtension extends Extension
         $owner->OneTimeCode = $owner->hashOneTimeCode($oneTimeCode, (string) $owner->{$identifierField});
         $owner->OneTimeCodeExpiry = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
         $owner->OneTimeCodeLastSent = date('Y-m-d H:i:s');
+        // The failed attempts are counted per code: every code gets its own set of attempts.
+        // (this also means that an account can never stay locked: ask for a new code.)
+        $owner->OneTimeCodeFailedAttempts = 0;
         $owner->write();
         return $oneTimeCode;
     }
