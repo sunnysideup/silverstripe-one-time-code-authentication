@@ -16,3 +16,9 @@ SilverStripe\Core\Injector\Injector:
     properties:
       Authenticators:
         onetimecode: '%$Sunnysideup\OneTimeCode\OneTimeCodeAuthenticator'
+
+  # used to limit how many codes can be requested from one IP address (see RequestLimiter)
+  Psr\SimpleCache\CacheInterface.OneTimeCode:
+    factory: SilverStripe\Core\Cache\CacheFactory
+    constructor:
+      namespace: "OneTimeCode"

@@ -152,9 +152,19 @@ class OneTimeCodeLoginHandler extends LoginHandler
     public function doSendOneTimeCode($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
     {
         // Always show the same neutral message regardless of whether the email
-        // matches an account, is rate-limited, or is locked out. This prevents
+        // matches an account or is rate-limited (per email). This prevents
         // account enumeration via the send-code response.
-        Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
+        $outcome = Injector::inst()->get(OneTimeCodeApi::class)->sendOneTimeCode($data, $request);
+        if (-1 === $outcome) {
+            // Too many requests from this visitor (IP address). This does not depend on the email address,
+            // so it is safe to say so.
+            $form->sessionMessage(
+                _t(__CLASS__ . '.TOO_MANY_REQUESTS', 'Too many requests. Please wait a few minutes and try again.'),
+                ValidationResult::TYPE_ERROR
+            );
+            return $form->getRequestHandler()->redirectBackToForm();
+        }
+
         $form->sessionMessage(
             _t(__CLASS__ . '.ENTER_CODE_MESSAGE', 'If an account matches that email address, a one-time code has been sent. Please enter it below.'),
             ValidationResult::TYPE_GOOD

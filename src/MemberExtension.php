@@ -11,6 +11,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\NumericField;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use SilverStripe\Security\Member;
 
 class MemberExtension extends Extension
@@ -88,11 +89,18 @@ class MemberExtension extends Extension
     }
 
     /**
+     * Set when the email address of the member has changed (see onBeforeWrite),
+     * so that the code is cleared once the member has been written.
+     */
+    protected bool $clearCodeAfterWrite = false;
+
+    /**
      * When the email address of a member changes, then a code that was sent to the old address
      * must not be usable any more, and the new address must be able to get a code straight away.
      */
     public function onBeforeWrite(): void
     {
+        $this->clearCodeAfterWrite = false;
         $owner = $this->getOwner();
         $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
         if (! $owner->isInDB() || ! $owner->isChanged($identifierField) || $owner->isChanged('OneTimeCode')) {
@@ -107,6 +115,26 @@ class MemberExtension extends Extension
             return;
         }
 
+        $this->clearCodeAfterWrite = true;
+    }
+
+    /**
+     * The code is cleared with a direct update, not by changing the fields of the object:
+     * SilverStripe only writes fields that it thinks have changed, and an object that was loaded
+     * before the code was issued does not know about the code.
+     */
+    public function onAfterWrite(): void
+    {
+        if (! $this->clearCodeAfterWrite) {
+            return;
+        }
+
+        $this->clearCodeAfterWrite = false;
+        $owner = $this->getOwner();
+        DB::prepared_query(
+            'UPDATE "Member" SET "OneTimeCode" = NULL, "OneTimeCodeExpiry" = ?, "OneTimeCodeLastSent" = NULL, "OneTimeCodeFailedAttempts" = 0 WHERE "ID" = ?',
+            ['1970-01-01 00:00:00', (int) $owner->ID]
+        );
         $owner->OneTimeCode = null;
         $owner->OneTimeCodeExpiry = '1970-01-01 00:00:00';
         $owner->OneTimeCodeLastSent = null;
