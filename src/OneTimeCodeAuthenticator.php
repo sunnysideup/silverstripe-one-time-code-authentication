@@ -54,6 +54,9 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
                 if (self::config()->get('can_login_to_cms') || ! Permission::checkMember($member, 'CMS_ACCESS')) {
                     $identityStore->logIn($member, false, $request);
                     $member->registerSuccessfulLogin();
+                    // The member has proven that they control this email address.
+                    // Extensions can use this, e.g. to link guest orders placed with this email address.
+                    $member->extend('onAfterOneTimeCodeLogin');
                     return $member;
                 } else {
                     $result->addError(
