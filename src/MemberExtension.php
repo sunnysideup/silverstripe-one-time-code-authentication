@@ -10,6 +10,8 @@ use SilverStripe\Core\Extension;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\NumericField;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\Security\Member;
 
 class MemberExtension extends Extension
 {
@@ -57,8 +59,8 @@ class MemberExtension extends Extension
             $oneTimeCode .= random_int(0, 9);
         }
         $this->plainOneTimeCode = $oneTimeCode;
-        // Persist only a hash so the live code cannot be read from the DB (or CMS).
-        $owner->OneTimeCode = $owner->hashOneTimeCode($oneTimeCode);
+        $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
+        $owner->OneTimeCode = $owner->hashOneTimeCode($oneTimeCode, (string) $owner->{$identifierField});
         $owner->OneTimeCodeExpiry = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
         $owner->OneTimeCodeLastSent = date('Y-m-d H:i:s');
         $owner->write();
@@ -68,10 +70,44 @@ class MemberExtension extends Extension
     /**
      * Deterministic, keyed hash of a one-time code so it can be matched via a DB
      * filter while not being stored (or displayed) in plaintext.
+     *
+     * If an email address is provided, then the hash is bound to that address:
+     * the same code hashes differently for a different address.
+     * (Capitals and spaces around the address do not matter.)
      */
-    public function hashOneTimeCode(string $code): string
+    public function hashOneTimeCode(string $code, ?string $email = null): string
     {
+        if (null !== $email) {
+            $code .= '|' . mb_strtolower(trim($email));
+        }
+
         return hash_hmac('sha256', $code, $this->getOneTimeCodeSecret());
+    }
+
+    /**
+     * When the email address of a member changes, then a code that was sent to the old address
+     * must not be usable any more, and the new address must be able to get a code straight away.
+     */
+    public function onBeforeWrite(): void
+    {
+        $owner = $this->getOwner();
+        $identifierField = Member::config()->get('unique_identifier_field') ?? 'Email';
+        if (! $owner->isInDB() || ! $owner->isChanged($identifierField) || $owner->isChanged('OneTimeCode')) {
+            return;
+        }
+
+        $changes = $owner->getChangedFields(false, DataObject::CHANGE_VALUE);
+        $before = mb_strtolower(trim((string) ($changes[$identifierField]['before'] ?? '')));
+        $after = mb_strtolower(trim((string) ($changes[$identifierField]['after'] ?? '')));
+        if ($before === $after) {
+            // only capitals or spaces have changed: same address.
+            return;
+        }
+
+        $owner->OneTimeCode = null;
+        $owner->OneTimeCodeExpiry = '1970-01-01 00:00:00';
+        $owner->OneTimeCodeLastSent = null;
+        $owner->OneTimeCodeFailedAttempts = 0;
     }
 
     /**

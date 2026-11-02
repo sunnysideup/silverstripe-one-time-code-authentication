@@ -38,8 +38,21 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
             return null;
         }
 
+        // The email has to be a single value (not e.g. an array).
+        $email = $data['Email'] ?? null;
+        if (! is_string($email) || '' === trim($email)) {
+            if ($result) {
+                $result->addError(
+                    _t(__CLASS__ . '.INVALID_CODE_OR_EMAILS', 'Please check that your one-time code is correct.')
+                );
+            }
+            return null;
+        }
+
         // Codes are stored hashed, so match on the hash rather than the plaintext.
-        $hashedCode = Member::singleton()->hashOneTimeCode($oneTimeCode);
+        // The hash is bound to the email address that the code was sent to:
+        // a code can not be used to log in with another email address.
+        $hashedCode = Member::singleton()->hashOneTimeCode($oneTimeCode, $email);
         $member = Member::get()
             ->filter([
                 Member::config()->get('unique_identifier_field') ?? 'Email' => $data['Email'],
