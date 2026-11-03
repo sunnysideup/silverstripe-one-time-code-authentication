@@ -150,7 +150,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
         $form->sessionMessage(
             _t(
                 __CLASS__ . '.RESTART_MESSAGE',
-                'Please enter your email address to get a new code. (If you asked for a code less than a minute ago, please use that code, or wait a minute before asking for another one.)'
+                'Please enter your email address (this can be a different one) to get a new code. If you asked for a code less than a minute ago, the first code is still valid: please use that one, or wait a minute before asking for another one.'
             ),
             ValidationResult::TYPE_GOOD
         );

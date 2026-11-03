@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunnysideup\OneTimeCode;
 
+use SilverStripe\Core\Convert;
 use SilverStripe\Forms\FieldGroup;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
@@ -71,9 +72,20 @@ class OneTimeCodeLoginForm extends LoginForm
                 LiteralField::create(
                     'CodeHelp',
                     '<p class="one-time-code-help">' .
+                    // NB: we do not say that a code has been sent: this page looks the same for every email address
+                    // (so that it can not be used to find out which email addresses have an account).
+                    _t(
+                        __CLASS__ . '.CODE_FOR_EMAIL',
+                        'If {email} has an account, we have emailed it a code.',
+                        ['email' => '<strong>' . Convert::raw2xml($this->enteredEmail()) . '</strong>']
+                    ) . ' ' .
                     _t(
                         __CLASS__ . '.CODE_HELP',
-                        'Type the code that we have emailed you. The code can only be used once and it expires after 15 minutes. The form is sent as soon as you have typed the last digit.'
+                        'Type the code below. The code can only be used once and it expires after 15 minutes. The form is sent as soon as you have typed the last digit.'
+                    ) . '<br />' .
+                    _t(
+                        __CLASS__ . '.CODE_NOT_RECEIVED',
+                        'Have not received a code, or is this the wrong email address? Use the button below the code to send a new code or to enter a different email address.'
                     ) .
                     '</p>'
                 ),
@@ -203,7 +215,7 @@ class OneTimeCodeLoginForm extends LoginForm
                 FormAction::create('doOneTimeCodeLogin', 'Log In'),
                 FormAction::create(
                     'doRestartOneTimeCode',
-                    _t(__CLASS__ . '.ASK_FOR_NEW_CODE', 'Ask for a new code')
+                    _t(__CLASS__ . '.ASK_FOR_NEW_CODE', 'Send a new code or use a different email')
                 )
                     ->addExtraClass('btn-link one-time-code-restart')
                     ->setValidationExempt(true)
@@ -213,6 +225,14 @@ class OneTimeCodeLoginForm extends LoginForm
                 FormAction::create('doSendOneTimeCode', 'Send Code')
             );
         }
+    }
+
+    /**
+     * The email address that was entered to ask for the code (it is only in the session of this visitor).
+     */
+    protected function enteredEmail(): string
+    {
+        return (string) ($this->getRequest()->getSession()->get('OneTimeCodeEmail') ?? '');
     }
 
     protected function codeSent(): bool
