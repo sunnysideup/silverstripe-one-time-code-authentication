@@ -62,6 +62,22 @@ class OneTimeCodeAuthenticator extends MemberAuthenticator
             ->first();
 
         if ($member) {
+            // CMS users can not use a one-time code. We check this BEFORE the code is used up,
+            // so that nothing about the member changes (and the code is not wasted).
+            if (! self::config()->get('can_login_to_cms') && Permission::checkMember($member, 'CMS_ACCESS')) {
+                if ($result) {
+                    $result->addError(
+                        _t(
+                            __CLASS__ . '.CMS_USERS_CANNOT_LOGIN',
+                            'CMS Users can not use the One Time Code authentication.'
+                        )
+                    );
+                }
+                Injector::inst()->get(IdentityStore::class)->logOut($request);
+
+                return null;
+            }
+
             $member->OneTimeCode = null;
             $member->OneTimeCodeExpiry = '1970-01-01 00:00:00';
             $member->write();
