@@ -81,12 +81,12 @@ class OneTimeCodeLoginForm extends LoginForm
                     ) . ' ' .
                     _t(
                         __CLASS__ . '.CODE_HELP',
-                        'Type the code below. The code can only be used once and it expires after 15 minutes. The form is sent as soon as you have typed the last digit.'
+                        'Type the code below. The code can only be used once and it expires after a few minutes.'
                     ) . '<br />' .
-                    _t(
-                        __CLASS__ . '.CODE_NOT_RECEIVED',
-                        'Have not received a code, or is this the wrong email address? Use the button below the code to send a new code or to enter a different email address.'
-                    ) .
+                    // _t(
+                    //     __CLASS__ . '.CODE_NOT_RECEIVED',
+                    //     'Have not received a code, or is this the wrong email address? Use the button below the code to send a new code or to enter a different email address.'
+                    // ) .
                     '</p>'
                 ),
                 $group,
