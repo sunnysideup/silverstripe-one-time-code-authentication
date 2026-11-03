@@ -8,7 +8,6 @@ use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Configurable;
-use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\MFA\Authenticator\LoginHandler;
 use SilverStripe\ORM\DB;
@@ -45,7 +44,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
     {
         $session = $request->getSession();
 
-        $email = Convert::raw2sql($request->getSession()->get('OneTimeCodeEmail') ?? '');
+        $email = (string) ($request->getSession()->get('OneTimeCodeEmail') ?? '');
 
         if (! $email) {
             $form->sessionMessage('Session expired.', ValidationResult::TYPE_ERROR);
@@ -78,10 +77,7 @@ class OneTimeCodeLoginHandler extends LoginHandler
         if ($memberByEmail && ! $this->countAttemptAndCheckLimit($memberByEmail)) {
             // Use the same generic message as an invalid code so that a code that has had its
             // attempts can not be distinguished from an unknown email (enumeration).
-            $form->sessionMessage(
-                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
-                ValidationResult::TYPE_ERROR
-            );
+            $form->sessionMessage($this->invalidCodeMessage(), ValidationResult::TYPE_ERROR);
             $session->clear('OneTimeCodeSent');
             $session->clear('OneTimeCodeEmail');
             return $form->getRequestHandler()->redirectBackToForm();
@@ -111,18 +107,54 @@ class OneTimeCodeLoginHandler extends LoginHandler
             }
 
             Injector::inst()->get(LogoutHandler::class)->doLogOut($member);
-            $form->sessionMessage(
-                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
-                ValidationResult::TYPE_ERROR
-            );
-        } else {
-            $form->sessionMessage(
-                _t(__CLASS__ . '.INVALID_CODE_MESSAGE', 'Invalid one-time code.'),
-                ValidationResult::TYPE_ERROR
-            );
         }
 
-        $form->setSessionValidationResult($result);
+        // One clear message that says what is wrong and what to do about it.
+        // (NB: do not replace the session validation result with $result here: that
+        // throws away the message above and the person sees nothing at all.)
+        $form->sessionMessage($this->invalidCodeMessage(), ValidationResult::TYPE_ERROR);
+        // The authenticator can add more specific messages (e.g. "CMS Users can not use ...").
+        // Those are only added when a valid code was entered, so they can not be used to find out which emails exist.
+        $genericFromAuthenticator = _t(OneTimeCodeAuthenticator::class . '.INVALID_CODE_OR_EMAILS', 'Please check that your one-time code is correct.');
+        foreach ($result->getMessages() as $message) {
+            if ($message['message'] !== $genericFromAuthenticator) {
+                $form->sessionMessage($message['message'], $message['messageType'] ?? ValidationResult::TYPE_ERROR);
+            }
+        }
+
+        return $form->getRequestHandler()->redirectBackToForm();
+    }
+
+    /**
+     * The message that is shown when the code that was entered is not accepted.
+     * It is the same for every reason (wrong code, expired code, too many tries, unknown email)
+     * so that it can not be used to find out which email addresses have accounts.
+     */
+    protected function invalidCodeMessage(): string
+    {
+        return _t(
+            __CLASS__ . '.INVALID_CODE_MESSAGE',
+            'Sorry, that code is not correct or it has expired. Please check the code in your email and try again, or ask for a new code.'
+        );
+    }
+
+    /**
+     * Start again: forget the email address and the "code sent" state,
+     * so that the person can ask for a (new) code.
+     */
+    public function doRestartOneTimeCode($data, OneTimeCodeLoginForm $form, HTTPRequest $request): HTTPResponse
+    {
+        $session = $request->getSession();
+        $session->clear('OneTimeCodeSent');
+        $session->clear('OneTimeCodeEmail');
+        $form->sessionMessage(
+            _t(
+                __CLASS__ . '.RESTART_MESSAGE',
+                'Please enter your email address to get a new code. (If you asked for a code less than a minute ago, please use that code, or wait a minute before asking for another one.)'
+            ),
+            ValidationResult::TYPE_GOOD
+        );
+
         return $form->getRequestHandler()->redirectBackToForm();
     }
 

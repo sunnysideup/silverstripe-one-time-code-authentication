@@ -9,7 +9,6 @@ use Psr\SimpleCache\CacheInterface;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Config\Configurable;
-use SilverStripe\Core\Convert;
 use SilverStripe\Core\Extensible;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
@@ -73,7 +72,7 @@ class OneTimeCodeApi
             return 0;
         }
 
-        $email = Convert::raw2sql($data['Email']);
+        $email = trim($data['Email']);
         if (! $email) {
             return 0;
         }

@@ -55,6 +55,7 @@ class OneTimeCodeLoginForm extends LoginForm
                 $field = TextField::create('OneTimeCode' . $i, '')
                     ->addExtraClass('one-time-code')
                     ->setAttribute('maxlength', '1')
+                    ->setAttribute('inputmode', 'numeric')
                     ->setAttribute('autocomplete', 'one-time-code');
 
                 if ($i === 1) {
@@ -67,6 +68,15 @@ class OneTimeCodeLoginForm extends LoginForm
             $group = FieldGroup::create($fields)
                 ->addExtraClass('one-time-code-group');
             return FieldList::create([
+                LiteralField::create(
+                    'CodeHelp',
+                    '<p class="one-time-code-help">' .
+                    _t(
+                        __CLASS__ . '.CODE_HELP',
+                        'Type the code that we have emailed you. The code can only be used once and it expires after 15 minutes. The form is sent as soon as you have typed the last digit.'
+                    ) .
+                    '</p>'
+                ),
                 $group,
                 LiteralField::create(
                     'Style',
@@ -86,9 +96,26 @@ class OneTimeCodeLoginForm extends LoginForm
                             max-width: 100%;
                         }
                     </style>
+                    <p id="one-time-code-status" class="one-time-code-status" role="status" aria-live="polite"></p>
                     <script>
                         const inputs = document.querySelectorAll(\'input.one-time-code\');
                         const firstInput = document.querySelector(\'input.one-time-code\');
+
+                        // The page reloads when the code is sent, so say what is happening.
+                        // Otherwise the digits just seem to vanish (and it looks like something went wrong).
+                        let codeSubmitted = false;
+                        function submitCode(form) {
+                            if (codeSubmitted) {
+                                return;
+                            }
+                            codeSubmitted = true;
+                            const status = document.getElementById(\'one-time-code-status\');
+                            if (status) {
+                                status.textContent = \'Checking your code...\';
+                            }
+                            inputs.forEach((i) => { i.readOnly = true; });
+                            form.submit();
+                        }
 
                         inputs.forEach((input, index) => {
                             input.addEventListener(\'input\', (e) => {
@@ -106,9 +133,21 @@ class OneTimeCodeLoginForm extends LoginForm
                             input.addEventListener(\'input\', () => {
                                 const allFilled = Array.from(inputs).every(i => i.value.length === i.maxLength);
                                 if (allFilled) {
-                                    input.form.submit();
+                                    submitCode(input.form);
                                 }
                             });
+                        });
+
+                        // coming back with the browser back button: start again
+                        window.addEventListener(\'pageshow\', (e) => {
+                            if (e.persisted) {
+                                codeSubmitted = false;
+                                inputs.forEach((i) => { i.readOnly = false; i.value = \'\'; });
+                                const status = document.getElementById(\'one-time-code-status\');
+                                if (status) {
+                                    status.textContent = \'\';
+                                }
+                            }
                         });
 
                         // auto focus first input on page load
@@ -126,7 +165,7 @@ class OneTimeCodeLoginForm extends LoginForm
                                     input.value = pasteData.charAt(index);
                                 });
                                 e.preventDefault();
-                                firstInput.form.submit();
+                                submitCode(firstInput.form);
                             }
                         });
                     </script>
@@ -158,8 +197,16 @@ class OneTimeCodeLoginForm extends LoginForm
     protected function getFormActions(): FieldList
     {
         if ($this->codeSent()) {
+            // NB: "Log In" must stay the first action: it is the default action of the form
+            // (it is used when the form is sent by the script as soon as the last digit has been typed, or with the Enter key).
             return FieldList::create(
-                FormAction::create('doOneTimeCodeLogin', 'Log In')
+                FormAction::create('doOneTimeCodeLogin', 'Log In'),
+                FormAction::create(
+                    'doRestartOneTimeCode',
+                    _t(__CLASS__ . '.ASK_FOR_NEW_CODE', 'Ask for a new code')
+                )
+                    ->addExtraClass('btn-link one-time-code-restart')
+                    ->setValidationExempt(true)
             );
         } else {
             return FieldList::create(
