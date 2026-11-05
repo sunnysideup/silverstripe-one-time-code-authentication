@@ -27,7 +27,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Sunnysideup\\OneTimeCodeAuthentication\\": "src/"
+      "Sunnysideup\\OneTimeCode\\": "src/"
     }
   },
   "extra": {
